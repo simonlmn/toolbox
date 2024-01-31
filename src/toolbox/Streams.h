@@ -1,6 +1,8 @@
 #ifndef TOOLBOX_STREAMS_H
 #define TOOLBOX_STREAMS_H
 
+#include <Print.h>
+#include <Stream.h>
 #include <cstring>
 #include <algorithm>
 #include "ConstStr.h"
@@ -54,6 +56,25 @@ public:
     auto oldPosition = _writePosition;
     string.copy(_string + _writePosition, _maxLength - _writePosition, 0, &_writePosition);
     return _writePosition - oldPosition;
+  }
+};
+
+class PrintOutput final : public IOutput {
+  Print& _print;
+
+public:
+  PrintOutput(Print& print) : _print(print) {}
+
+  size_t write(char c) override {
+    return _print.write(c);
+  }
+
+  size_t write(const char* string) override {
+    return _print.write(string);
+  }
+  
+  size_t write(const __FlashStringHelper* string) override {
+    return _print.print(string);
   }
 };
 

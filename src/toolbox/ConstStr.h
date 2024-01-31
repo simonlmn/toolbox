@@ -1,7 +1,7 @@
 #ifndef TOOLBOX_CONSTSTR_H_
 #define TOOLBOX_CONSTSTR_H_
 
-#ifndef ARDUINO_MAIN
+#ifndef ARDUINO
 #include <cstring>
 #define strlen_P strlen
 #define strncpy_P strncpy
