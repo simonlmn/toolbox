@@ -104,6 +104,15 @@ public:
     }
   }
 
+  String toString() const {
+    switch (_type) {
+      case Type::String: return *_reference.string;
+      case Type::ConstChar: return _reference.constchar;
+      case Type::ProgMem: return _reference.progmem;
+      default: return {};
+    }
+  }
+
   size_t len(size_t offset = 0u) const {
     switch (_type) {
       case Type::String: return _reference.string->length() - offset;
