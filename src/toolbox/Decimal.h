@@ -4,6 +4,7 @@
 #include <functional>
 #include <algorithm>
 #include "Maybe.h"
+#include "String.h"
 
 namespace toolbox {
 
@@ -48,7 +49,7 @@ uint8_t numberOfDigits(int32_t x) {
   }
 }
 
-int32_t powerOfTen(uint8_t exp) {
+int64_t powerOfTen(uint8_t exp) {
   switch (exp) {
     case 0: return 1;
     case 1: return 10;
@@ -60,8 +61,21 @@ int32_t powerOfTen(uint8_t exp) {
     case 7: return 10000000;
     case 8: return 100000000;
     case 9: return 1000000000;
+    case 10: return 10000000000;
+    case 11: return 100000000000;
+    case 12: return 1000000000000;
+    case 13: return 10000000000000;
+    case 14: return 100000000000000;
+    case 15: return 1000000000000000;
+    case 16: return 10000000000000000;
+    case 17: return 100000000000000000;
+    case 18: return 1000000000000000000;
     default: return 1;
   }
+}
+
+int64_t rescale(int64_t number, int8_t exp) {
+  return exp < 0 ? number / powerOfTen(-exp) : number * powerOfTen(exp);
 }
 
 /**
@@ -71,44 +85,33 @@ int32_t powerOfTen(uint8_t exp) {
  * the number to other numeric primitive types, but that may loose precision
  * or may not be representable at all.
  * 
- * It is limited to at most 9 integer digits and 9 decimal places due to the
- * internal 32-bit representation of these numbers.
+ * It is limited in the range of numbers it can represent by the size of the
+ * underlying integer type (64 bit), which also means that only a limited range
+ * of decimal places can be safely used (up to 18).
+ * 
  */
 class Decimal final {
-  static char BUFFER[23];
+  static constexpr auto MAX_DOT_POSITION = 21;
+  static constexpr auto MAX_STRING_LENGTH = 22;
+  static char BUFFER[MAX_STRING_LENGTH + 1];
 
-  int32_t _integer;
-  uint32_t _decimals;
+  int64_t _number;
   uint8_t _decimalPlaces;
 
+  Decimal(int64_t number, uint8_t decimalPlaces) : _number(number), _decimalPlaces(decimalPlaces) {}
+
 public:
-  static const unsigned int MAX_INT32_DIGITS;
-  static const int32_t MAX_INT32_DECIMAL = 999999999;
-  static const int32_t MIN_INT32_DECIMAL = -999999999;
+  Decimal() : Decimal(0, 0) {}
 
-  static unsigned int limitDecimalPlaces(unsigned int decimalPlaces) { return std::min(decimalPlaces, MAX_INT32_DIGITS); }
-
-  Decimal() : Decimal(0, 0, 0) {}
-  Decimal(int32_t integer, uint32_t decimals, unsigned int decimalPlaces) : _integer(integer), _decimals(decimals), _decimalPlaces(limitDecimalPlaces(decimalPlaces)) {
-    if (_decimalPlaces == 0) {
-      _decimals = 0;
-    } else {
-      auto decimalDigits = numberOfDigits(_decimals);
-      if (_decimalPlaces < decimalDigits) {
-        _decimals /= powerOfTen(decimalDigits - _decimalPlaces);
-      }
-    }
+  int64_t integer() const {
+    return _decimalPlaces > 0 ? _number / powerOfTen(_decimalPlaces) : _number;
   }
 
-  int32_t integer() const {
-    return _integer;
+  uint64_t decimals() const {
+    return _decimalPlaces > 0 ? std::abs(_number) % powerOfTen(_decimalPlaces) : 0;
   }
 
-  uint32_t decimals() const {
-    return _decimals;
-  }
-
-  unsigned int decimalPlaces() const {
+  uint8_t decimalPlaces() const {
     return _decimalPlaces;
   }
 
@@ -117,101 +120,89 @@ public:
   }
 
   float toFloat() const {
-    float integer = float(_integer);
-    float decimals = float(_decimals) / powerOfTen(_decimalPlaces);
-    return _integer < 0 ? integer - decimals : integer + decimals;
+    float i = float(integer());
+    float d = float(decimals()) / powerOfTen(_decimalPlaces);
+    return _number < 0 ? i - d : i + d;
   }
 
   double toDouble() const {
-    double integer = double(_integer);
-    double decimals = double(_decimals) / powerOfTen(_decimalPlaces);
-    return _integer < 0 ? integer - decimals : integer + decimals;
+    double i = double(integer());
+    double d = double(decimals()) / powerOfTen(_decimalPlaces);
+    return _number < 0 ? i - d : i + d;
   }
 
-  Maybe<int32_t> toFixedPoint(unsigned int decimalPlaces) {
-    if (decimalPlaces == 0) {
-      return _integer;
+  int64_t toFixedPoint(uint8_t decimalPlaces) {
+    if (decimalPlaces == _decimalPlaces) {
+      return _number;
+    } else {
+      return rescale(_number, int8_t(decimalPlaces) - int8_t(_decimalPlaces));
     }
-    
-    decimalPlaces = limitDecimalPlaces(decimalPlaces);
-
-    auto integerDigits = numberOfDigits(_integer);
-    if ((integerDigits + decimalPlaces) > MAX_INT32_DIGITS) {
-      return {};
-    }
-
-    int32_t integer = _integer * powerOfTen(decimalPlaces); // we want 5 decimal places: 123 -> 12300000
-
-    int32_t decimals = _decimals;
-    if (_decimalPlaces > decimalPlaces) { // e.g. we have 5 but want 2: 123.12345 -> 123.12
-      decimals /= powerOfTen(_decimalPlaces - decimalPlaces);
-    } else { // e.g. we have 2 but want 5: 123.12 -> 123.12000
-      decimals *= powerOfTen(decimalPlaces - _decimalPlaces);
-    }
-
-    return integer < 0 ? integer - decimals : integer + decimals;
   }
 
-  const char* toString(char* buffer = nullptr) const {
+  static Decimal fromFixedPoint(int64_t fixedPoint, uint8_t decimalPlaces) {
+    return Decimal{fixedPoint, decimalPlaces};
+  }
+
+  /**
+   * Converts the number into a string.
+   * 
+   * When not passing in a buffer, an internal buffer is used which means that
+   * the contents of the returned string will only stay until the next invocation
+   * of this method.
+   * 
+   * If a buffer is passed in, it must have at least space for MAX_STRING_LENGTH + 1 characters.
+   */
+  strref toString(char* buffer = nullptr) const {
     buffer = buffer ? buffer : BUFFER;
 
-    auto integerLength = snprintf(buffer, std::size(BUFFER), "%i", _integer);
-    buffer[integerLength] = '.';
-    auto decimalsLength = snprintf(buffer + (integerLength + 1), std::size(BUFFER) - (integerLength + 1), "%u", _decimals);
-    if (decimalsLength < _decimalPlaces) {
-      auto numberOfZeroesToAdd = _decimalPlaces - decimalsLength;
-      memmove(buffer + (integerLength + 1 + numberOfZeroesToAdd), buffer + (integerLength + 1), decimalsLength + 1);
-      memset(buffer + (integerLength + 1), '0', numberOfZeroesToAdd);
+    auto length = sprintf(buffer, "%lli", _number);
+    if (_decimalPlaces > 0) {
+      auto signLength = _number < 0 ? 1 : 0;
+      length -= signLength;
+      if (_decimalPlaces >= length) {
+        memmove(buffer + signLength + _decimalPlaces - length + 1, buffer + signLength, length + 1);
+        memset(buffer + signLength, '0', _decimalPlaces - length + 1);
+        length += _decimalPlaces - length + 1;
+      }
+      // insert .
+      memmove(buffer + signLength + length - _decimalPlaces + 1, buffer + signLength + length - _decimalPlaces, _decimalPlaces + 1);
+      buffer[signLength + length - _decimalPlaces] = '.';
+    } else {
+      // we always append .0 to have a consistent output format.
+      strcpy(buffer + length, ".0");
     }
 
     return buffer;
   }
 
-  static Decimal fromFixedPoint(int32_t fixedPoint, unsigned int decimalPlaces) {
-    if (decimalPlaces == 0) {
-      return Decimal{fixedPoint, 0, 0};
+  static Maybe<Decimal> fromString(const strref& string) {
+    if (string.len() > MAX_STRING_LENGTH) {
+      return {};
     }
 
-    decimalPlaces = limitDecimalPlaces(decimalPlaces);
-    auto divisor = powerOfTen(decimalPlaces);
+    string.copy(BUFFER, MAX_STRING_LENGTH);
+    uint8_t decimalPlaces = 0;
 
-    return Decimal{fixedPoint / divisor, uint32_t(std::abs(fixedPoint) % divisor), decimalPlaces};
-  }
-
-  static Maybe<Decimal> fromString(const char* string) {
-    Decimal result {};
-
-    const char* dot = strchr(string, '.');
-    if (dot) {
-      char* end = nullptr;
-      result._integer = strtol(string, &end, 10);
-      if (end == dot) {
-        result._decimalPlaces = limitDecimalPlaces(strlen(dot + 1));
-        memcpy(BUFFER, dot + 1, result._decimalPlaces);
-        BUFFER[result._decimalPlaces] = '\0';
-        result._decimals = strtoul(BUFFER, &end, 10);
-        if (*end == '\0') {
-          return {result};
-        } else {
-          return {};
-        }
-      } else {
+    ssize_t dotPosition = string.indexOf('.');
+    if (dotPosition >= 0) {
+      if (dotPosition > MAX_DOT_POSITION) {
         return {};
       }
+      
+      decimalPlaces = string.copy(BUFFER + dotPosition, MAX_STRING_LENGTH - dotPosition, dotPosition + 1);
+    }
+
+    char* end = nullptr;
+    int64_t number = strtoll(BUFFER, &end, 10);
+    if (*end == '\0') {
+      return {Decimal{number, decimalPlaces}};
     } else {
-      char* end = nullptr;
-      result._integer = strtol(string, &end, 10);
-      if (*end == '\0') {
-        return {result};
-      } else {
-        return {};
-      }
+      return {};
     }
   }
 };
 
-char Decimal::BUFFER[23] {};
-const unsigned int Decimal::MAX_INT32_DIGITS = 9u;
+char Decimal::BUFFER[Decimal::MAX_STRING_LENGTH + 1] {};
 
 }
 
