@@ -5,7 +5,7 @@
 #include <Stream.h>
 #include <cstring>
 #include <algorithm>
-#include "ConstStr.h"
+#include "String.h"
 
 namespace toolbox {
 
@@ -45,14 +45,14 @@ public:
   }
 
   virtual size_t write(const char* string) override {
-    return write(ConstStr{string});
+    return write(strref{string});
   }
   
   virtual size_t write(const __FlashStringHelper* string) override {
-    return write(ConstStr{string});
+    return write(strref{string});
   }
 
-  size_t write(const ConstStr& string) {
+  size_t write(const strref& string) {
     auto oldPosition = _writePosition;
     string.copy(_string + _writePosition, _maxLength - _writePosition, 0, &_writePosition);
     return _writePosition - oldPosition;
@@ -91,11 +91,11 @@ struct IInput {
  * a ConstStr to allow strings stored in normal or flash memory).
  */
 class StringInput final : public IInput {
-  ConstStr _string;
+  strref _string;
   size_t _readPosition;
 
 public:
-  StringInput(ConstStr string) : _string(string), _readPosition(0) {}
+  StringInput(strref string) : _string(string), _readPosition(0) {}
 
   size_t available() const override {
     return _string.len() - _readPosition;
@@ -105,6 +105,27 @@ public:
     auto oldReadPosition = _readPosition;
     _string.copy(buffer, bufferSize, _readPosition, &_readPosition);
     return _readPosition - oldReadPosition;
+  }
+};
+
+class StreamInput final : public IInput {
+  Stream& _stream;
+
+public:
+  StreamInput(Stream& stream) : _stream(stream) {}
+
+  size_t available() const override {
+    return _stream.available();
+  }
+
+  size_t read(char* buffer, size_t bufferSize) override {
+    if (bufferSize == 0) {
+      return 0;
+    }
+
+    size_t length = _stream.readBytes(buffer, bufferSize - 1);
+    buffer[length] = '\0';
+    return length;
   }
 };
 
