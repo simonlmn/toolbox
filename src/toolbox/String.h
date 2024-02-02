@@ -113,6 +113,24 @@ public:
     }
   }
 
+  /**
+   * Copy the referenced string into a newly allocated array of characters.
+   * 
+   * NOTE: the caller is responsible for managing the ownership and eventually
+   * de-allocation of the array behind the returned pointer!
+   */
+  char* toCharArray() const {
+    size_t length = len();
+    char* array = new char[length + 1];
+    switch (_type) {
+      case Type::String: _reference.string->toCharArray(array, length + 1); break;
+      case Type::ConstChar: memcpy(array, _reference.constchar, length + 1); break;
+      case Type::ProgMem: memcpy_P(array, reinterpret_cast<const char*>(_reference.progmem), length + 1);
+      default: array[0] = '\0';
+    }
+    return array;
+  }
+
   size_t len(size_t offset = 0u) const {
     switch (_type) {
       case Type::String: return _reference.string->length() - offset;
