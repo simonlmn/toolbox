@@ -1,5 +1,5 @@
-#ifndef TOOLBOX_CSTRING_H_
-#define TOOLBOX_CSTRING_H_
+#ifndef TOOLBOX_STRING_H_
+#define TOOLBOX_STRING_H_
 
 #include <WString.h>
 #include <algorithm>
@@ -54,9 +54,10 @@ public:
     String,
     ConstChar,
     ProgMem
-  } _type;
+  };
 
 private:
+  Type _type;
   union {
     const String* string;
     const char* constchar;
