@@ -10,28 +10,29 @@ namespace toolbox {
  */
 template<typename T>
 class Maybe final {
-  bool _hasValue;
+  bool _available;
   T _value;
 
 public:
-  Maybe() : _hasValue(false) {}
-  Maybe(T value) : _hasValue(true), _value(value) {}
-  Maybe(bool hasValue, T value) : _hasValue(_hasValue), _value(value) {}
+  Maybe() : _available(false) {}
+  Maybe(T value) : _available(true), _value(value) {}
+  Maybe(bool available, T value) : _available(_available), _value(value) {}
 
-  bool hasValue() const { return _hasValue; }
-  const T& value() const { return _value; }
+  bool available() const { return _available; }
+  const T& get() const { return _value; }
+  T& get() { return _value; }
 
-  operator bool() const { return hasValue(); }
+  operator bool() const { return available(); }
 
-  bool operator==(const Maybe& other) const { return _hasValue == other._hasValue && (*this == other._value); }
+  bool operator==(const Maybe& other) const { return _available == other._available && (*this == other._value); }
   bool operator!=(const Maybe& other) const { return !(*this == other); }
-  bool operator==(const T& other) const { return _hasValue && (_value == other); }
-  bool operator!=(const T& other) const { return _hasValue && (_value != other); }
+  bool operator==(const T& other) const { return _available && (_value == other); }
+  bool operator!=(const T& other) const { return _available && (_value != other); }
 
   template<typename F>
   Maybe<typename std::invoke_result<F, const T&>::type> then(F f) const {
-    if (hasValue()) {
-      return f(value());
+    if (available()) {
+      return f(get());
     } else {
       return {};
     }
@@ -39,16 +40,16 @@ public:
 
   template<typename F>
   const T& otherwise(F f) const {
-    if (hasValue()) {
-      return value();
+    if (available()) {
+      return get();
     } else {
       return f();
     }
   }
 
   const T& otherwise(const T& v) const {
-    if (hasValue()) {
-      return value();
+    if (available()) {
+      return get();
     } else {
       return v;
     }
