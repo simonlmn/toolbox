@@ -1,1 +1,1 @@
-#define TOOLBOX_VERSION "0.3.0"
+#define TOOLBOX_VERSION "0.4.0"
