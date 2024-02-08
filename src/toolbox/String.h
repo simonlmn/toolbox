@@ -161,6 +161,15 @@ public:
     return length;
   }
 
+  char charAt(size_t i) const {
+    switch (_type) {
+      case Type::String: return _reference.string->charAt(i);
+      case Type::ConstChar: return _reference.constchar[i];
+      case Type::ProgMem: return pgm_read_byte(reinterpret_cast<const char*>(_reference.progmem) + i);
+      default: return '\0';
+    }
+  }
+
   ssize_t indexOf(char c, size_t offset = 0u) const {
     switch (_type) {
       case Type::String: return _reference.string->indexOf(c, offset);
