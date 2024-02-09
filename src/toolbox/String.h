@@ -3,6 +3,7 @@
 
 #include <WString.h>
 #include <algorithm>
+#include "Maybe.h"
 
 #ifndef ARDUINO
 #include <cstring>
@@ -289,6 +290,28 @@ public:
 
 const char strref::EMPTY[] = "";
 const char strref::EMPTY_FPSTR[] = "";
+
+/**
+ * Lightweight/minimal wrapper around statically allocated strings / char arrays.
+ */
+template<size_t length>
+class str {
+  static constexpr size_t BUFFER_SIZE = length + 1;
+  char _buffer[BUFFER_SIZE] {'\0'};
+
+public:
+  str() {}
+  
+  operator const char*() const { return _buffer; }
+
+  str(const strref& string) { string.copy(_buffer, BUFFER_SIZE, true); }
+  str& operator=(const strref& string) { string.copy(_buffer, BUFFER_SIZE, true); return *this; }
+  operator strref() const { return {_buffer}; }
+
+  str(const Maybe<strref>& string) { if (string) string.get().copy(_buffer, BUFFER_SIZE, true); }
+  str& operator=(const Maybe<strref>& string) { if (string) string.get().copy(_buffer, BUFFER_SIZE, true); return *this; }
+  operator Maybe<strref>() const { return strref{_buffer}; }
+};
 
 }
 
