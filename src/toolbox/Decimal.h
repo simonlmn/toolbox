@@ -167,9 +167,6 @@ public:
       // insert .
       memmove(buffer + signLength + length - _decimalPlaces + 1, buffer + signLength + length - _decimalPlaces, _decimalPlaces + 1);
       buffer[signLength + length - _decimalPlaces] = '.';
-    } else {
-      // we always append .0 to have a consistent output format.
-      strcpy(buffer + length, ".0");
     }
 
     return buffer;
