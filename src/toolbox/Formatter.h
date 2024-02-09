@@ -27,12 +27,16 @@ public:
   }
 
   char* vformat(const strref& fmt, va_list args) {
-    if (fmt.isInProgmem()) {
-      vsnprintf_P(_buffer, _size, (PGM_P)fmt.fpstr(), args);
+    if (fmt.isZeroTerminated()) {
+      if (fmt.isInProgmem()) {
+        vsnprintf_P(_buffer, _size, (PGM_P)fmt.fpstr(), args);
+      } else {
+        vsnprintf(_buffer, _size, fmt.cstr(), args);
+      }
+      _buffer[_size - 1] = '\0';
     } else {
-      vsnprintf(_buffer, _size, fmt.cstr(), args);
+      _buffer[0] = '\0';
     }
-    _buffer[_size - 1] = '\0';
     return _buffer;
   }
   
