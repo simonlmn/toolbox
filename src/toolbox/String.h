@@ -6,16 +6,20 @@
 
 #ifndef ARDUINO
 #include <cstring>
-#define strlen_P strlen
-#define strncpy_P strncpy
-#define memcpy_P memcpy
-#define strcmp_P strcmp
 class __FlashStringHelper; // Forward declare helper for strings stored in "PROGMEM"
+#define PROGMEM
+#define PGM_P const char*
+#define FPSTR(x) reinterpret_cast<const __FlashStringHelper*>(x)
+#define strlen_P strlen
+#define memcpy_P memcpy
+#define memchr_P memchr
+#define memcmp_P memcmp
+#define pgm_read_byte(x) *(x)
 #endif
 
 namespace toolbox {
 
-int strncmp_P2(PGM_P str1P, PGM_P str2P, size_t size = SIZE_MAX)
+int memcmp_P2(PGM_P str1P, PGM_P str2P, size_t size)
 {
     int result = 0;
 
@@ -24,7 +28,7 @@ int strncmp_P2(PGM_P str1P, PGM_P str2P, size_t size = SIZE_MAX)
         char ch1 = pgm_read_byte(str1P++);
         char ch2 = pgm_read_byte(str2P++);
         result = ch1 - ch2;
-        if (result != 0 || ch2 == '\0')
+        if (result != 0)
         {
             break;
         }
@@ -57,28 +61,61 @@ public:
   };
 
 private:
-  Type _type;
-  union {
+  union Ref {
     const String* string;
     const char* constchar;
     const __FlashStringHelper* progmem;
-  } _reference;
-  
+    Ref() {}
+    Ref(const String* string) : string(string) {}
+    Ref(const char* constchar) : constchar(constchar) {}
+    Ref(const __FlashStringHelper* progmem) : progmem(progmem) {}
+  };
+
+  Type _type;
+  Ref _reference;
+  size_t _offset;
+  size_t _length;
+  bool _zeroTerminated;
+
+  strref(Type type, Ref reference, size_t offset, size_t length, bool zeroTerminated) : _type(type), _reference(reference), _offset(offset), _length(length), _zeroTerminated(zeroTerminated) {}
+
 public:
-  strref() : strref(EMPTY) {}
-  strref(const String& string) : _type(Type::ProgMem) { _reference.string = &string; }
-  strref(const char* string) : _type(Type::ConstChar) { _reference.constchar = string; }
-  strref(const __FlashStringHelper* string) : _type(Type::ProgMem) { _reference.progmem = string; }
+  strref() : strref(EMPTY, 0) { _zeroTerminated = true; }
   
+  strref(const String& string) : _type(Type::String), _reference(&string), _offset(0), _length(string.length()), _zeroTerminated(true) {}
+  strref(const String& string, size_t length) : _type(Type::String), _reference(&string), _offset(0), _length(length), _zeroTerminated(false) {}
+  
+  strref(const char* string) : _type(Type::ConstChar), _reference(string), _offset(0), _length(strlen(string)), _zeroTerminated(true) {}
+  strref(const char* string, size_t length) : _type(Type::ConstChar), _reference(string), _offset(0), _length(length), _zeroTerminated(false) {}
+  
+  strref(const __FlashStringHelper* string) : _type(Type::ProgMem), _reference(string), _offset(0), _length(strlen_P(reinterpret_cast<const char*>(string))), _zeroTerminated(true) {}
+  strref(const __FlashStringHelper* string, size_t length) : _type(Type::ProgMem), _reference(string), _offset(0), _length(length), _zeroTerminated(false) {} 
+
   Type type() const {
     return _type;
+  }
+
+  size_t offset() const {
+    return _offset;
+  }
+
+  size_t length() const {
+    return _length;
+  }
+
+  bool empty() const {
+    return _length == 0u;
+  }
+
+  bool isZeroTerminated() const {
+    return _zeroTerminated;
   }
 
   bool isInProgmem() const {
     return _type == Type::ProgMem;
   }
 
-  const char* raw() const {
+  const char* ref() const {
     switch (_type) {
       case Type::String: return _reference.string->c_str();
       case Type::ConstChar: return _reference.constchar;
@@ -89,8 +126,8 @@ public:
 
   const char* cstr() const {
     switch (_type) {
-      case Type::String: return _reference.string->c_str();
-      case Type::ConstChar: return _reference.constchar;
+      case Type::String: return _reference.string->c_str() + _offset;
+      case Type::ConstChar: return _reference.constchar + _offset;
       case Type::ProgMem: return EMPTY;
       default: return EMPTY;
     }
@@ -98,18 +135,40 @@ public:
 
   const __FlashStringHelper* fpstr() const {
     switch (_type) {
-      case Type::String: return FPSTR(EMPTY_FPSTR);
-      case Type::ConstChar: return FPSTR(EMPTY_FPSTR);
-      case Type::ProgMem: return _reference.progmem;
-      default: return FPSTR(EMPTY_FPSTR);
+      case Type::String: return reinterpret_cast<const __FlashStringHelper*>(EMPTY_FPSTR);
+      case Type::ConstChar: return reinterpret_cast<const __FlashStringHelper*>(EMPTY_FPSTR);
+      case Type::ProgMem: return reinterpret_cast<const __FlashStringHelper*>(reinterpret_cast<const char*>(_reference.progmem) + _offset);
+      default: return reinterpret_cast<const __FlashStringHelper*>(EMPTY_FPSTR);
     }
+  }
+
+  strref substring(size_t offset, size_t length) const {
+    offset = std::min(offset, _length);
+    length = std::min(length, _length - offset);
+    return {_type, _reference, _offset + offset, length, offset + length == _length ? _zeroTerminated : false };
+  }
+
+  strref leftmost(size_t length) const {
+    return substring(0, length);
+  }
+
+  strref rightmost(size_t length) const {
+    return substring(length < _length ? _length - length : 0, length);
+  }
+
+  strref middle(size_t start, size_t end) const {
+    return substring(start, end - start);
+  }
+
+  strref skip(size_t offset) const {
+    return substring(offset, _length);
   }
 
   String toString() const {
     switch (_type) {
-      case Type::String: return *_reference.string;
-      case Type::ConstChar: return _reference.constchar;
-      case Type::ProgMem: return _reference.progmem;
+      case Type::String: return _reference.string->substring(_offset, _length);
+      case Type::ConstChar: return String{cstr()}.substring(0, _length);
+      case Type::ProgMem: return String{fpstr()}.substring(0, _length);
       default: return {};
     }
   }
@@ -120,93 +179,83 @@ public:
    * NOTE: the caller is responsible for managing the ownership and eventually
    * de-allocation of the array behind the returned pointer!
    */
-  char* toCharArray() const {
-    size_t length = len();
-    char* array = new char[length + 1];
-    switch (_type) {
-      case Type::String: _reference.string->toCharArray(array, length + 1); break;
-      case Type::ConstChar: memcpy(array, _reference.constchar, length + 1); break;
-      case Type::ProgMem: memcpy_P(array, reinterpret_cast<const char*>(_reference.progmem), length + 1);
-      default: array[0] = '\0';
-    }
+  char* toCharArray(bool zeroTerminated) const {
+    size_t arraySize = _length + (zeroTerminated ? 1 : 0);
+    char* array = new char[arraySize];
+    copy(array, arraySize, zeroTerminated);
     return array;
   }
 
-  size_t len(size_t offset = 0u) const {
-    switch (_type) {
-      case Type::String: return _reference.string->length() - offset;
-      case Type::ConstChar: return strlen(_reference.constchar + offset);
-      case Type::ProgMem: return strlen_P(reinterpret_cast<const char*>(_reference.progmem) + offset);
-      default: return 0;
+  size_t copy(char* dest, size_t destSize, bool zeroTerminated) const {
+    if (destSize == 0) {
+      return 0;
     }
-  }
-
-  size_t copy(char* dest, size_t maxLength, size_t offset = 0u, size_t* destLength = nullptr) const {
-    const size_t length = len(offset);
-    size_t lengthToCopy = std::min(length, maxLength);
+    
+    size_t lengthToCopy = std::min(destSize - (zeroTerminated ? 1 : 0), _length);
     
     switch (_type) {
-      case Type::String: memcpy(dest, _reference.string->c_str() + offset, lengthToCopy); break;
-      case Type::ConstChar: memcpy(dest, _reference.constchar + offset, lengthToCopy); break;
-      case Type::ProgMem: memcpy_P(dest, reinterpret_cast<const char*>(_reference.progmem) + offset, lengthToCopy); break;
-      default: return 0;
+      case Type::String: memcpy(dest, _reference.string->c_str() + _offset, lengthToCopy); break;
+      case Type::ConstChar: memcpy(dest, _reference.constchar + _offset, lengthToCopy); break;
+      case Type::ProgMem: memcpy_P(dest, reinterpret_cast<const char*>(_reference.progmem) + _offset, lengthToCopy); break;
+      default: lengthToCopy = 0; break;
     }
 
-    dest[lengthToCopy] = '\0';
-
-    if (destLength != nullptr) {
-      *destLength += lengthToCopy;
+    if (zeroTerminated) {
+      dest[lengthToCopy] = '\0';
     }
-
-    return length;
+    
+    return lengthToCopy;
   }
 
   char charAt(size_t i) const {
     switch (_type) {
-      case Type::String: return _reference.string->charAt(i);
-      case Type::ConstChar: return _reference.constchar[i];
-      case Type::ProgMem: return pgm_read_byte(reinterpret_cast<const char*>(_reference.progmem) + i);
+      case Type::String: return _reference.string->charAt(_offset + i);
+      case Type::ConstChar: return _reference.constchar[_offset + i];
+      case Type::ProgMem: return pgm_read_byte(reinterpret_cast<const char*>(_reference.progmem) + _offset + i);
       default: return '\0';
     }
   }
 
-  ssize_t indexOf(char c, size_t offset = 0u) const {
+  ssize_t indexOf(char c) const {
     switch (_type) {
-      case Type::String: return _reference.string->indexOf(c, offset);
+      case Type::String: return _reference.string->indexOf(c, _offset);
       case Type::ConstChar: {
-        auto p = strchr(_reference.constchar + offset, c);
-        return p ? p - _reference.constchar : -1;
+        auto p = static_cast<const char*>(memchr(_reference.constchar + _offset, c, _length));
+        return p ? p - (_reference.constchar + _offset) : -1;
       }
       case Type::ProgMem:
       {
-        auto p = (const char*) memchr_P(reinterpret_cast<const char*>(_reference.progmem) + offset, c, len());
-        return p ? p - _reference.constchar : -1;
+        auto p = static_cast<const char*>(memchr_P(reinterpret_cast<const char*>(_reference.progmem) + _offset, c, _length));
+        return p ? p - (reinterpret_cast<const char*>(_reference.progmem) + _offset) : -1;
       }
       default: return -1;
     }
   }
 
   int compare(const strref& other) const {
+    if (_length != other._length) {
+      return _length < other._length ? -1 : 1;
+    }
     switch (_type) {
       case Type::String:
         switch (other._type) {
           case Type::String: return _reference.string->compareTo(*other._reference.string);
-          case Type::ConstChar: return strcmp(_reference.string->c_str(), other._reference.constchar);
-          case Type::ProgMem: return strcmp_P(_reference.string->c_str(), reinterpret_cast<const char*>(_reference.progmem));
+          case Type::ConstChar: return memcmp(_reference.string->c_str() + _offset, other._reference.constchar + other._offset, _length);
+          case Type::ProgMem: return memcmp_P(_reference.string->c_str() + _offset, reinterpret_cast<const char*>(other._reference.progmem) + other._offset, _length);
           default: return 1;
         }
       case Type::ConstChar:
         switch (other._type) {
-          case Type::String: return strcmp(_reference.constchar, other._reference.string->c_str());
-          case Type::ConstChar: return strcmp(_reference.constchar, other._reference.constchar);
-          case Type::ProgMem: return strcmp_P(_reference.constchar, reinterpret_cast<const char*>(_reference.progmem));
+          case Type::String: return memcmp(_reference.constchar + _offset, other._reference.string->c_str() + other._offset, _length);
+          case Type::ConstChar: return memcmp(_reference.constchar + _offset, other._reference.constchar + other._offset, _length);
+          case Type::ProgMem: return memcmp_P(_reference.constchar + _offset, reinterpret_cast<const char*>(other._reference.progmem) + other._offset, _length);
           default: return 1;
         }
       case Type::ProgMem:
         switch (other._type) {
-          case Type::String: return -strcmp_P(other._reference.string->c_str(), reinterpret_cast<const char*>(_reference.progmem));
-          case Type::ConstChar: return -strcmp_P(other._reference.constchar, reinterpret_cast<const char*>(_reference.progmem));
-          case Type::ProgMem: return strncmp_P2(reinterpret_cast<const char*>(_reference.progmem), reinterpret_cast<const char*>(other._reference.progmem));
+          case Type::String: return -memcmp_P(other._reference.string->c_str() + other._offset, reinterpret_cast<const char*>(_reference.progmem) + _offset, _length);
+          case Type::ConstChar: return -memcmp_P(other._reference.constchar + other._offset, reinterpret_cast<const char*>(_reference.progmem) + _offset, _length);
+          case Type::ProgMem: return memcmp_P2(reinterpret_cast<const char*>(_reference.progmem) + _offset, reinterpret_cast<const char*>(other._reference.progmem) + other._offset, _length);
           default: return 1;
         }
       default: return -1;

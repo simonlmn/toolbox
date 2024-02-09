@@ -176,11 +176,11 @@ public:
   }
 
   static Maybe<Decimal> fromString(const strref& string) {
-    if (string.len() > MAX_STRING_LENGTH) {
+    if (string.length() > MAX_STRING_LENGTH) {
       return {};
     }
 
-    string.copy(BUFFER, MAX_STRING_LENGTH);
+    string.copy(BUFFER, MAX_STRING_LENGTH, true);
     uint8_t decimalPlaces = 0;
 
     ssize_t dotPosition = string.indexOf('.');
@@ -189,7 +189,7 @@ public:
         return {};
       }
       
-      decimalPlaces = string.copy(BUFFER + dotPosition, MAX_STRING_LENGTH - dotPosition, dotPosition + 1);
+      decimalPlaces = string.skip(dotPosition + 1).copy(BUFFER + dotPosition, MAX_STRING_LENGTH - dotPosition, true);
     }
 
     char* end = nullptr;
