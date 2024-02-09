@@ -10,13 +10,12 @@
 namespace toolbox {
 
 /**
- * Minimal interface for character-based output streams.
+ * Minimal interface for output streams.
  */
 class IOutput {
 public:
   virtual size_t write(char c) = 0;
-  virtual size_t write(const char* string) = 0;
-  virtual size_t write(const __FlashStringHelper* string) = 0;
+  virtual size_t write(const strref& data) = 0;
 };
 
 /**
@@ -44,18 +43,10 @@ public:
     }
   }
 
-  virtual size_t write(const char* string) override {
-    return write(strref{string});
-  }
-  
-  virtual size_t write(const __FlashStringHelper* string) override {
-    return write(strref{string});
-  }
-
-  size_t write(const strref& string) {
-    auto oldPosition = _writePosition;
-    string.copy(_string + _writePosition, _maxLength - _writePosition, 0, &_writePosition);
-    return _writePosition - oldPosition;
+  size_t write(const strref& string) override {
+    size_t length = string.copy(_string + _writePosition, _maxLength - _writePosition, true);
+    _writePosition += length;
+    return length;
   }
 };
 
@@ -69,42 +60,60 @@ public:
     return _print.write(c);
   }
 
-  size_t write(const char* string) override {
-    return _print.write(string);
-  }
-  
-  size_t write(const __FlashStringHelper* string) override {
-    return _print.print(string);
+  size_t write(const strref& string) override {
+    if (string.isZeroTerminated()) {
+      return string.isInProgmem() ? _print.print(string.fpstr()) : _print.print(string.cstr());
+    } else {
+      if (string.isInProgmem()) {
+        PGM_P p = reinterpret_cast<PGM_P>(string.fpstr());
+        size_t length = string.length();
+        size_t n = 0;
+        while (n < length) {
+          if (write(pgm_read_byte(p++))) n++;
+          else break;
+        }
+        return n;
+      } else {
+        return _print.write(string.cstr(), string.length());
+      }
+    }
   }
 };
 
 /**
- * Minimal interface for charachter-based input streams.
+ * Minimal interface for input streams.
  */
 struct IInput {
   virtual size_t available() const = 0;
   virtual size_t read(char* buffer, size_t bufferSize) = 0;
+  virtual size_t readString(char* buffer, size_t bufferSize) = 0;
 };
 
 /**
- * Input implementation to read from a plain C-string (wrapped in
- * a ConstStr to allow strings stored in normal or flash memory).
+ * Input implementation to read from a string (wrapped in
+ * a strref to allow strings stored in normal or flash memory).
  */
 class StringInput final : public IInput {
   strref _string;
   size_t _readPosition;
 
 public:
-  StringInput(strref string) : _string(string), _readPosition(0) {}
+  StringInput(strref string) : _string(string) {}
 
   size_t available() const override {
-    return _string.len() - _readPosition;
+    return _string.length();
   }
 
   size_t read(char* buffer, size_t bufferSize) override {
-    auto oldReadPosition = _readPosition;
-    _string.copy(buffer, bufferSize, _readPosition, &_readPosition);
-    return _readPosition - oldReadPosition;
+    size_t length = _string.copy(buffer, bufferSize, false);
+    _string = _string.skip(length);
+    return length;
+  }
+
+  size_t readString(char* buffer, size_t bufferSize) override {
+    size_t length = _string.copy(buffer, bufferSize, true);
+    _string = _string.skip(length);
+    return length;
   }
 };
 
@@ -119,12 +128,15 @@ public:
   }
 
   size_t read(char* buffer, size_t bufferSize) override {
+    return _stream.readBytes(buffer, bufferSize);
+  }
+
+  size_t readString(char* buffer, size_t bufferSize) override {
     if (bufferSize == 0) {
       return 0;
     }
-
     size_t length = _stream.readBytes(buffer, bufferSize - 1);
-    buffer[length] = '\0';
+    buffer[length + 1] = '\0';
     return length;
   }
 };
