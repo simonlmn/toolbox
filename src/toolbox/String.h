@@ -2,6 +2,10 @@
 #define TOOLBOX_STRING_H_
 
 #include <WString.h>
+#include <Stream.h>
+#ifdef ARDUINO_ARCH_ESP8266
+#include <StreamDev.h>
+#endif
 #include <algorithm>
 #include "Maybe.h"
 
@@ -52,8 +56,9 @@ int memcmp_P2(PGM_P str1P, PGM_P str2P, size_t size)
  */
 class strref final {
 public:
-  static const char EMPTY[];
+  static const char EMPTY_CSTR[];
   static const char EMPTY_FPSTR[] PROGMEM;
+  static const strref EMPTY;
 
   enum struct Type {
     String,
@@ -81,7 +86,7 @@ private:
   strref(Type type, Ref reference, size_t offset, size_t length, bool zeroTerminated) : _type(type), _reference(reference), _offset(offset), _length(length), _zeroTerminated(zeroTerminated) {}
 
 public:
-  strref() : strref(EMPTY, 0) { _zeroTerminated = true; }
+  strref() : strref(EMPTY_CSTR, 0) { _zeroTerminated = true; }
   
   strref(const String& string) : _type(Type::String), _reference(&string), _offset(0), _length(string.length()), _zeroTerminated(true) {}
   strref(const String& string, size_t length) : _type(Type::String), _reference(&string), _offset(0), _length(length), _zeroTerminated(false) {}
@@ -121,7 +126,7 @@ public:
       case Type::String: return _reference.string->c_str();
       case Type::ConstChar: return _reference.constchar;
       case Type::ProgMem: return reinterpret_cast<const char*>(_reference.progmem);
-      default: return EMPTY;
+      default: return EMPTY_CSTR;
     }
   }
 
@@ -129,8 +134,8 @@ public:
     switch (_type) {
       case Type::String: return _reference.string->c_str() + _offset;
       case Type::ConstChar: return _reference.constchar + _offset;
-      case Type::ProgMem: return EMPTY;
-      default: return EMPTY;
+      case Type::ProgMem: return EMPTY_CSTR;
+      default: return EMPTY_CSTR;
     }
   }
 
@@ -140,6 +145,14 @@ public:
       case Type::ConstChar: return reinterpret_cast<const __FlashStringHelper*>(EMPTY_FPSTR);
       case Type::ProgMem: return reinterpret_cast<const __FlashStringHelper*>(reinterpret_cast<const char*>(_reference.progmem) + _offset);
       default: return reinterpret_cast<const __FlashStringHelper*>(EMPTY_FPSTR);
+    }
+  }
+
+  strref ensure_cstr() const {
+    if (isInProgmem() || !_zeroTerminated) {
+      return toString();
+    } else {
+      return *this;
     }
   }
 
@@ -173,6 +186,12 @@ public:
       default: return {};
     }
   }
+
+#ifdef ARDUINO_ARCH_ESP8266
+  StreamConstPtr toStream() const {
+    return {ref() + _offset, _length}; // StreamConstPtr has auto-detection for PROGMEM addresses
+  }
+#endif
 
   /**
    * Copy the referenced string into a newly allocated array of characters.
@@ -288,8 +307,9 @@ public:
   }
 };
 
-const char strref::EMPTY[] = "";
+const char strref::EMPTY_CSTR[] = "";
 const char strref::EMPTY_FPSTR[] = "";
+const strref strref::EMPTY {};
 
 /**
  * Lightweight/minimal wrapper around statically allocated strings / char arrays.
