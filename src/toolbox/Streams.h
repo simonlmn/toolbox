@@ -10,77 +10,6 @@
 namespace toolbox {
 
 /**
- * Minimal interface for output streams.
- */
-class IOutput {
-public:
-  virtual size_t write(char c) = 0;
-  virtual size_t write(const strref& data) = 0;
-};
-
-/**
- * Output implementation to allow writing to a plain C-string style
- * pre-allocated buffer.
- */
-class StringOutput final : public IOutput {
-  char* _string;
-  size_t _maxLength;
-  size_t _writePosition;
-
-public:
-  template<size_t N>
-  StringOutput(char (&string)[N]) : StringOutput(string, N) {}
-
-  StringOutput(char* string, size_t maxLength) : _string(string), _maxLength(maxLength), _writePosition(strlen(string)) {}
-
-  virtual size_t write(char c) override {
-    if (_writePosition < _maxLength) {
-      _string[_writePosition++] = c;
-      _string[_writePosition] = '\0';
-      return 1;
-    } else {
-      return 0;
-    }
-  }
-
-  size_t write(const strref& string) override {
-    size_t length = string.copy(_string + _writePosition, _maxLength - _writePosition, true);
-    _writePosition += length;
-    return length;
-  }
-};
-
-class PrintOutput final : public IOutput {
-  Print& _print;
-
-public:
-  PrintOutput(Print& print) : _print(print) {}
-
-  size_t write(char c) override {
-    return _print.write(c);
-  }
-
-  size_t write(const strref& string) override {
-    if (string.isZeroTerminated()) {
-      return string.isInProgmem() ? _print.print(string.fpstr()) : _print.print(string.cstr());
-    } else {
-      if (string.isInProgmem()) {
-        PGM_P p = reinterpret_cast<PGM_P>(string.fpstr());
-        size_t length = string.length();
-        size_t n = 0;
-        while (n < length) {
-          if (write(pgm_read_byte(p++))) n++;
-          else break;
-        }
-        return n;
-      } else {
-        return _print.write(string.cstr(), string.length());
-      }
-    }
-  }
-};
-
-/**
  * Minimal interface for input streams.
  */
 struct IInput {
@@ -98,7 +27,7 @@ class StringInput final : public IInput {
   size_t _readPosition;
 
 public:
-  StringInput(strref string) : _string(string) {}
+  StringInput(const strref& string) : _string(string) {}
 
   size_t available() const override {
     return _string.length();
@@ -139,6 +68,167 @@ public:
     buffer[length + 1] = '\0';
     return length;
   }
+};
+
+class InputStream final : public Stream {
+  IInput& _input;
+
+public:
+  InputStream(IInput& input) : _input(input) {}
+
+  size_t write(uint8_t) override { return 0; }
+
+  size_t write(const uint8_t*, size_t) override { return 0; }
+
+  int availableForWrite() override { return 0; }
+
+  int available() override { return _input.available(); }
+
+  int read() override {
+    char c;
+    if (_input.read(&c, 1) == 1) {
+      return c;
+    } else {
+      return -1;
+    }
+  }
+
+  int peek() override {
+      return -1;
+  }
+
+#ifdef ARDUINO_ARCH_ESP8266
+  size_t readBytes(char* buffer, size_t len) override {
+    return _input.read(buffer, len);
+  }
+
+  int read(uint8_t* buffer, size_t len) override {
+    return _input.read((char*)buffer, len);
+  }
+
+  bool outputCanTimeout() override {
+    return false;
+  }
+
+  bool inputCanTimeout() override {
+    return false;
+  }
+
+  ssize_t streamRemaining() override {
+      return -1;
+  }
+#else
+  size_t sendAll(Print& output) {
+    size_t totalSize = 0;
+    char buffer[32];
+    while (_input.available()) {
+      size_t bufferSize = _input.read(buffer, std::size(buffer));
+      size_t writeSize = output.write(buffer, bufferSize);
+      totalSize += writeSize;
+      if (writeSize != bufferSize) {
+        break;
+      }
+    }
+    return totalSize;
+  }
+#endif
+};
+
+/**
+ * Minimal interface for output streams.
+ */
+class IOutput {
+public:
+  virtual size_t write(char c) = 0;
+  virtual size_t write(const strref& data) = 0;
+#ifdef TOOLBOX_IOUTPUT_IINPUT_SUPPORT
+  virtual size_t write(IInput& input) = 0;
+#endif
+};
+
+/**
+ * Output implementation to allow writing to a plain C-string style
+ * pre-allocated buffer.
+ */
+class StringOutput final : public IOutput {
+  char* _string;
+  size_t _maxLength;
+  size_t _writePosition;
+
+  size_t available() const {
+    return _maxLength - _writePosition;
+  }
+
+public:
+  template<size_t N>
+  StringOutput(char (&string)[N]) : StringOutput(string, N - 1) {}
+
+  StringOutput(char* string, size_t maxLength) : _string(string), _maxLength(maxLength), _writePosition(strlen(string)) {}
+
+  size_t write(char c) override {
+    if (available() > 0) {
+      _string[_writePosition++] = c;
+      _string[_writePosition] = '\0';
+      return 1;
+    } else {
+      return 0;
+    }
+  }
+
+  size_t write(const strref& string) override {
+    size_t length = string.copy(_string + _writePosition, available() + 1, true);
+    _writePosition += length;
+    return length;
+  }
+
+#ifdef TOOLBOX_IOUTPUT_IINPUT_SUPPORT
+  size_t write(IInput& input) override {
+    size_t totalLength = 0;
+    while (available() && input.available()) {
+      size_t length = input.read(_string + _writePosition, available());
+      totalLength += length;
+      _writePosition += length;
+      _string[_writePosition] = '\0';
+    }
+    return totalLength;
+  }
+#endif
+};
+
+class PrintOutput final : public IOutput {
+  Print& _print;
+
+public:
+  PrintOutput(Print& print) : _print(print) {}
+
+  size_t write(char c) override {
+    return _print.write(c);
+  }
+
+  size_t write(const strref& string) override {
+    if (string.isZeroTerminated()) {
+      return string.isInProgmem() ? _print.print(string.fpstr()) : _print.print(string.cstr());
+    } else {
+      if (string.isInProgmem()) {
+        PGM_P p = reinterpret_cast<PGM_P>(string.fpstr());
+        size_t length = string.length();
+        size_t n = 0;
+        while (n < length) {
+          if (write(pgm_read_byte(p++))) n++;
+          else break;
+        }
+        return n;
+      } else {
+        return _print.write(string.cstr(), string.length());
+      }
+    }
+  }
+
+#ifdef TOOLBOX_IOUTPUT_IINPUT_SUPPORT
+  size_t write(IInput& input) override {
+    return InputStream{input}.sendAll(_print);
+  }
+#endif
 };
 
 }
