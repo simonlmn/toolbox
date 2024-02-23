@@ -18,12 +18,17 @@ struct Iterable {
 };
 
 template<typename K, typename V>
-struct Mapping {
-  K key;
-  V value;
+class Mapping {
+  K _key;
+  V _value;
 
-  Mapping() : key(), value() {}
-  Mapping(const K& key, const V& value) : key(key), value(value) {}
+public:
+  Mapping() : _key(), _value() {}
+  Mapping(const K& key, const V& value) : _key(key), _value(value) {}
+
+  const K& key() const { return _key; }
+  const V& value() const { return _value; }
+  V& value() { return _value; }
 };
 
 template<typename K, typename V, size_t CAPACITY>
@@ -101,11 +106,24 @@ public:
     return (i < _currentSize) && (_entries[i].key == key) ? &_entries[i].value : nullptr;
   }
 
+  V* find(const K& key) {
+    size_t i = findIndex(key);
+    return (i < _currentSize) && (_entries[i].key == key) ? &_entries[i].value : nullptr;
+  }
+
   const EntryType* begin() const {
     return &_entries[0];
   }
 
+  EntryType* begin() {
+    return &_entries[0];
+  }
+
   const EntryType* end() const {
+    return &_entries[_currentSize];
+  }
+  
+  EntryType* end() {
     return &_entries[_currentSize];
   }
 };
