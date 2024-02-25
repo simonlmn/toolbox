@@ -47,7 +47,7 @@ class FixedCapacityMap {
     size_t last = _currentSize;
     while (first != last) {
       size_t middle = (first + last) / 2u;
-      if (key <= _entries[middle].key) {
+      if (key <= _entries[middle].key()) {
         last = middle;
       } else {
         first = middle + 1;
@@ -79,7 +79,7 @@ public:
 
     size_t i = findIndex(key);
     if (i < _currentSize) {
-      if (_entries[i].key != key) {
+      if (_entries[i].key() != key) {
         memmove(&_entries[i + 1], &_entries[i], (_currentSize - i) * sizeof(EntryType));
         _currentSize += 1u;
       }
@@ -92,7 +92,7 @@ public:
 
   bool remove(const K& key) {
     size_t i = findIndex(key);
-    if (i < _currentSize && _entries[i].key == key) {
+    if (i < _currentSize && _entries[i].key() == key) {
       memmove(&_entries[i], &_entries[i + 1], (_currentSize - i - 1) * sizeof(EntryType));
       _currentSize -= 1;
       return true;
@@ -103,12 +103,12 @@ public:
 
   const V* find(const K& key) const {
     size_t i = findIndex(key);
-    return (i < _currentSize) && (_entries[i].key == key) ? &_entries[i].value : nullptr;
+    return (i < _currentSize) && (_entries[i].key() == key) ? &_entries[i].value() : nullptr;
   }
 
   V* find(const K& key) {
     size_t i = findIndex(key);
-    return (i < _currentSize) && (_entries[i].key == key) ? &_entries[i].value : nullptr;
+    return (i < _currentSize) && (_entries[i].key() == key) ? &_entries[i].value() : nullptr;
   }
 
   const EntryType* begin() const {
