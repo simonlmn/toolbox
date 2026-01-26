@@ -1,7 +1,9 @@
 #ifndef TOOLBOX_MAYBE_H
 #define TOOLBOX_MAYBE_H
 
+#ifndef ARDUINO_AVR_NANO
 #include <functional>
+#endif
 
 namespace toolbox {
 
@@ -16,7 +18,7 @@ class Maybe final {
 public:
   Maybe() : _available(false) {}
   Maybe(T value) : _available(true), _value(value) {}
-  Maybe(bool available, T value) : _available(_available), _value(value) {}
+  Maybe(bool available, T value) : _available(available), _value(value) {}
 
   bool available() const { return _available; }
   const T& get() const { return _value; }
@@ -29,6 +31,7 @@ public:
   bool operator==(const T& other) const { return _available && (_value == other); }
   bool operator!=(const T& other) const { return _available && (_value != other); }
 
+  #ifndef ARDUINO_AVR_NANO
   template<typename F>
   Maybe<typename std::invoke_result<F, const T&>::type> then(F f) const {
     if (available()) {
@@ -37,6 +40,16 @@ public:
       return {};
     }
   }
+  #else
+  template<typename F, typename R>
+  Maybe<R> then(F f) const {
+    if (available()) {
+      return f(get());
+    } else {
+      return {};
+    }
+  }
+  #endif
 
   template<typename F>
   const T& otherwise(F f) const {

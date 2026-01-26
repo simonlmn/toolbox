@@ -1,12 +1,18 @@
 #ifndef TOOLBOX_STRING_H_
 #define TOOLBOX_STRING_H_
 
+#include <Arduino.h>
 #include <WString.h>
 #include <Stream.h>
 #ifdef ARDUINO_ARCH_ESP8266
 #include <StreamDev.h>
 #endif
+#ifndef ARDUINO_AVR_NANO
 #include <algorithm>
+using std::min;
+#else
+using ssize_t = long;
+#endif
 #include "Maybe.h"
 
 #ifndef ARDUINO
@@ -24,25 +30,7 @@ class __FlashStringHelper; // Forward declare helper for strings stored in "PROG
 
 namespace toolbox {
 
-int memcmp_P2(PGM_P str1P, PGM_P str2P, size_t size)
-{
-    int result = 0;
-
-    while (size > 0)
-    {
-        char ch1 = pgm_read_byte(str1P++);
-        char ch2 = pgm_read_byte(str2P++);
-        result = ch1 - ch2;
-        if (result != 0)
-        {
-            break;
-        }
-
-        size--;
-    }
-
-    return result;
-}
+int memcmp_P2(PGM_P str1P, PGM_P str2P, size_t size);
 
 /**
  * Lightweight, read-only wrapper around const char pointers to "C-style strings" - which can
@@ -157,8 +145,8 @@ public:
   }
 
   strref substring(size_t offset, size_t length) const {
-    offset = std::min(offset, _length);
-    length = std::min(length, _length - offset);
+    offset = min(offset, _length);
+    length = min(length, _length - offset);
     return {_type, _reference, _offset + offset, length, offset + length == _length ? _zeroTerminated : false };
   }
 
@@ -211,7 +199,7 @@ public:
       return 0;
     }
     
-    size_t lengthToCopy = std::min(destSize - (zeroTerminated ? 1 : 0), _length);
+    size_t lengthToCopy = min(destSize - (zeroTerminated ? 1 : 0), _length);
     
     switch (_type) {
       case Type::String: memcpy(dest, _reference.string->c_str() + _offset, lengthToCopy); break;
@@ -306,10 +294,6 @@ public:
     return compare(other) >= 0;
   }
 };
-
-const char strref::EMPTY_CSTR[] = "";
-const char strref::EMPTY_FPSTR[] = "";
-const strref strref::EMPTY {};
 
 /**
  * Lightweight/minimal wrapper around statically allocated strings / char arrays.
