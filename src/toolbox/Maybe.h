@@ -3,6 +3,7 @@
 
 #ifndef ARDUINO_AVR_NANO
 #include <functional>
+#include <type_traits>
 #endif
 
 namespace toolbox {
@@ -51,7 +52,8 @@ public:
   }
   #endif
 
-  template<typename F>
+  #ifndef ARDUINO_AVR_NANO
+  template<typename F, std::enable_if_t<std::is_invocable<F>::value, bool> = true>
   const T& otherwise(F f) const {
     if (available()) {
       return get();
@@ -59,6 +61,7 @@ public:
       return f();
     }
   }
+  #endif
 
   const T& otherwise(const T& v) const {
     if (available()) {

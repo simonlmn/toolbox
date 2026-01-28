@@ -3,16 +3,26 @@
 
 #include "String.h"
 #include "Maybe.h"
+#include <limits.h>
 
 namespace toolbox {
 
+/**
+ * Generic conversion struct template.
+ * 
+ * The default implementation returns empty strings and empty Maybe objects.
+ * Specializations for specific types provide methods to convert to/from strings.
+ * 
+ * Note: The result provided by toString() can only be assumed to be valid until
+ * the next call to toString() on any converter!
+ */
 template<typename T>
 struct convert final {
   static strref toString(T value) { return ""; }
   static Maybe<T> fromString(const strref& string) { return {}; }
 };
 
-static char NUMBER_STRING_BUFFER[2 + 8 * sizeof(long)];
+inline char NUMBER_STRING_BUFFER[2 + 8 * sizeof(long)];
 
 template<>
 struct convert<char> final {
@@ -22,7 +32,13 @@ struct convert<char> final {
     return NUMBER_STRING_BUFFER;
   }
 
-  static Maybe<char> fromString(const strref& string) {
+  static Maybe<char> fromString(const strref& string, strref* end = nullptr) {
+    if (string.length() < 1) {
+      return {};
+    }
+    if (end != nullptr) {
+      *end = string.skip(1);
+    }
     return string.charAt(0);
   }
 };
@@ -34,9 +50,17 @@ struct convert<unsigned char> final {
     return NUMBER_STRING_BUFFER;
   }
 
-  static Maybe<unsigned char> fromString(const strref& string, int base) {
-    char* end;
-    auto value = strtoul(string.ensure_cstr().cstr(), &end, base);
+  static Maybe<unsigned char> fromString(const strref& string, strref* end = nullptr, int base = 0) {
+    strref str = string.ensure_cstr();
+    char* endptr;
+    auto value = strtoul(str.cstr(), &endptr, base);
+    if (endptr == str.cstr() || value > UCHAR_MAX) {
+      return {};
+    }
+    if (end != nullptr) {
+      *end = str.skipTo(endptr);
+    }
+    return static_cast<unsigned char>(value);
   }
 };
 
@@ -47,8 +71,17 @@ struct convert<short> final {
     return NUMBER_STRING_BUFFER;
   }
 
-  static short fromString(const strref& string, char** endptr, int base) {
-    return static_cast<short>(strtol(string.ensure_cstr().cstr(), endptr, base));
+  static Maybe<short> fromString(const strref& string, strref* end = nullptr, int base = 0) {
+    strref str = string.ensure_cstr();
+    char* endptr;
+    auto value = strtol(str.cstr(), &endptr, base);
+    if (endptr == str.cstr() || value < SHRT_MIN || value > SHRT_MAX) {
+      return {};
+    }
+    if (end != nullptr) {
+      *end = str.skipTo(endptr);
+    }
+    return static_cast<short>(value);
   }
 };
 
@@ -59,8 +92,17 @@ struct convert<unsigned short> final {
     return NUMBER_STRING_BUFFER;
   }
 
-  static unsigned short fromString(const strref& string, char** endptr, int base) {
-    return static_cast<unsigned short>(strtoul(string.ensure_cstr().cstr(), endptr, base));
+  static Maybe<unsigned short> fromString(const strref& string, strref* end = nullptr, int base = 0) {
+    strref str = string.ensure_cstr();
+    char* endptr;
+    auto value = strtoul(str.cstr(), &endptr, base);
+    if (endptr == str.cstr() || value > USHRT_MAX) {
+      return {};
+    }
+    if (end != nullptr) {
+      *end = str.skipTo(endptr);
+    }
+    return static_cast<unsigned short>(value);
   }
 };
 
@@ -71,8 +113,17 @@ struct convert<int> final {
     return NUMBER_STRING_BUFFER;
   }
 
-  static int fromString(const strref& string, char** endptr, int base) {
-    return static_cast<int>(strtol(string.ensure_cstr().cstr(), endptr, base));
+  static Maybe<int> fromString(const strref& string, strref* end = nullptr, int base = 0) {
+    strref str = string.ensure_cstr();
+    char* endptr;
+    auto value = strtol(str.cstr(), &endptr, base);
+    if (endptr == str.cstr() || value < INT_MIN || value > INT_MAX) {
+      return {};
+    }
+    if (end != nullptr) {
+      *end = str.skipTo(endptr);
+    }
+    return static_cast<int>(value);
   }
 };
 
@@ -83,8 +134,17 @@ struct convert<unsigned int> final {
     return NUMBER_STRING_BUFFER;
   }
 
-  static unsigned int fromString(const strref& string, char** endptr, int base) {
-    return static_cast<unsigned int>(strtoul(string.ensure_cstr().cstr(), endptr, base));
+  static Maybe<unsigned int> fromString(const strref& string, strref* end = nullptr, int base = 0) {
+    strref str = string.ensure_cstr();
+    char* endptr;
+    auto value = strtoul(str.cstr(), &endptr, base);
+    if (endptr == str.cstr() || value > UINT_MAX) {
+      return {};
+    }
+    if (end != nullptr) {
+      *end = str.skipTo(endptr);
+    }
+    return static_cast<unsigned int>(value);
   }
 };
 
@@ -95,8 +155,17 @@ struct convert<long> final {
     return NUMBER_STRING_BUFFER;
   }
 
-  static long fromString(const strref& string, char** endptr, int base) {
-    return static_cast<long>(strtol(string.ensure_cstr().cstr(), endptr, base));
+  static Maybe<long> fromString(const strref& string, strref* end = nullptr, int base = 0) {
+    strref str = string.ensure_cstr();
+    char* endptr;
+    auto value = strtol(str.cstr(), &endptr, base);
+    if (endptr == str.cstr()) {
+      return {};
+    }
+    if (end != nullptr) {
+      *end = str.skipTo(endptr);
+    }
+    return static_cast<long>(value);
   }
 };
 
@@ -107,8 +176,17 @@ struct convert<unsigned long> final {
     return NUMBER_STRING_BUFFER;
   }
 
-  static unsigned long fromString(const strref& string, char** endptr, int base) {
-    return static_cast<unsigned long>(strtoul(string.ensure_cstr().cstr(), endptr, base));
+  static Maybe<unsigned long> fromString(const strref& string, strref* end = nullptr, int base = 0) {
+    strref str = string.ensure_cstr();
+    char* endptr;
+    auto value = strtoul(str.cstr(), &endptr, base);
+    if (endptr == str.cstr()) {
+      return {};
+    }
+    if (end != nullptr) {
+      *end = str.skipTo(endptr);
+    }
+    return static_cast<unsigned long>(value);
   }
 };
 
@@ -129,48 +207,46 @@ struct convert<bool> final {
     }
   }
 
-  static bool fromString(const strref& string, bool defaultValue, const char** endptr = nullptr, BoolFormat format = BoolFormat::Logic) {
-    const char* start = string.ensure_cstr().cstr();
-    while (*start == ' ') { start += 1; }
-    
+  static Maybe<bool> fromString(const strref& string, strref* end = nullptr, BoolFormat format = BoolFormat::Logic) {
+    strref str = string.ltrim(' ').ensure_cstr();
     switch (format) {
       default:
       case BoolFormat::Logic:
-        if (strcmp(start, ("true")) == 0) {
-          if (endptr != nullptr) { *endptr = start + 4; }
+        if (str.leftmost(4) == "true") {
+          if (end != nullptr) { *end = str.skip(4); }
           return true;
-        } else if (strcmp(start, ("false")) == 0) {
-          if (endptr != nullptr) { *endptr = start + 5; }
+        } else if (str.leftmost(5) == "false") {
+          if (end != nullptr) { *end = str.skip(5); }
           return false;
         } else {
-          if (endptr != nullptr) { *endptr = string.ensure_cstr().cstr(); }
-          return defaultValue;
+          if (end != nullptr) { *end = str; }
+          return {};
         }
         break;
       case BoolFormat::Numeric:
-        if (strcmp(start, ("1")) == 0) {
-          if (endptr != nullptr) { *endptr = start + 1; }
+        if (str.leftmost(1) == "1") {
+          if (end != nullptr) { *end = str.skip(1); }
           return true;
-        } else if (strcmp(start, ("0")) == 0) {
-          if (endptr != nullptr) { *endptr = start + 1; }
+        } else if (str.leftmost(1) == "0") {
+          if (end != nullptr) { *end = str.skip(1); }
           return false;
         } else {
-          if (endptr != nullptr) { *endptr = string.ensure_cstr().cstr(); }
-          return defaultValue;
+          if (end != nullptr) { *end = str; }
+          return {};
         }
         break;
       case BoolFormat::Io:
-        if (strcmp(start, ("HIGH")) == 0) {
-          if (endptr != nullptr) { *endptr = start + 4; }
+        if (str.leftmost(4) == "HIGH") {
+          if (end != nullptr) { *end = str.skip(4); }
           return true;
-        } else if (strcmp(start, ("LOW")) == 0) {
-          if (endptr != nullptr) { *endptr = start + 3; }
+        } else if (str.leftmost(3) == "LOW") {
+          if (end != nullptr) { *end = str.skip(3); }
           return false;
         } else {
-          if (endptr != nullptr) { *endptr = string.ensure_cstr().cstr(); }
-          return defaultValue;
+          if (end != nullptr) { *end = str; }
+          return {};
         }
-        break;;
+        break;
     }
   }
 };

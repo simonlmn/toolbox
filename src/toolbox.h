@@ -5,5 +5,6 @@
 #include "toolbox/String.h"
 #include "toolbox/Formatter.h"
 #include "toolbox/Maybe.h"
+#include "toolbox/Conversion.h"
 
 #endif

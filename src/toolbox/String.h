@@ -166,6 +166,22 @@ public:
     return substring(offset, _length);
   }
 
+  strref skipTo(const char* cstr_ptr) const {
+    const char* this_cstr = cstr();
+    if (cstr_ptr < this_cstr || cstr_ptr > this_cstr + _length) {
+      return EMPTY;
+    }
+    return substring(static_cast<size_t>(cstr_ptr - cstr()), _length);
+  }
+
+  strref ltrim(char c) const {
+    size_t offset = 0;
+    while (offset < _length && charAt(offset) == c) {
+      offset++;
+    }
+    return substring(offset, _length - offset);
+  }
+
   String toString() const {
     switch (_type) {
       case Type::String: return _reference.string->substring(_offset, _length);
