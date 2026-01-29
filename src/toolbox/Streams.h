@@ -46,6 +46,9 @@ public:
   }
 };
 
+/**
+ * Input implementation that reads from an Arduino Stream.
+ */
 class StreamInput final : public IInput {
   Stream& _stream;
 
@@ -70,6 +73,9 @@ public:
   }
 };
 
+/**
+ * Adapter that exposes an IInput instance as an Arduino Stream.
+ */
 class InputStream final : public Stream {
   IInput& _input;
 
@@ -195,6 +201,9 @@ public:
 #endif
 };
 
+/**
+ * Output implementation that writes to an Arduino Print.
+ */
 class PrintOutput final : public IOutput {
   Print& _print;
 

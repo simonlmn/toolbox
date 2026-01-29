@@ -18,21 +18,26 @@ namespace toolbox {
  */
 uint8_t numberOfDigits(int32_t x);
 
+/**
+ * Compute $10^{exp}$ for small non-negative exponents.
+ */
 int64_t powerOfTen(uint8_t exp);
 
+/**
+ * Rescale a fixed-point value by adjusting the decimal exponent.
+ */
 int64_t rescale(int64_t number, int8_t exp);
 
 /**
  * Representation of decimal numbers for in- and output purposes.
- * 
+ *
  * It mainly provides conversion to and from strings, but also can convert
  * the number to other numeric primitive types, but that may loose precision
  * or may not be representable at all.
- * 
+ *
  * It is limited in the range of numbers it can represent by the size of the
  * underlying integer type (64 bit), which also means that only a limited range
  * of decimal places can be safely used (up to 18).
- * 
  */
 class Decimal final {
   static constexpr auto MAX_DOT_POSITION = 21;
@@ -89,11 +94,11 @@ public:
 
   /**
    * Converts the number into a string.
-   * 
+   *
    * When not passing in a buffer, an internal buffer is used which means that
    * the contents of the returned string will only stay until the next invocation
    * of this method.
-   * 
+   *
    * If a buffer is passed in, it must have at least space for MAX_STRING_LENGTH + 1 characters.
    */
   strref toString(char* buffer = nullptr) const {
@@ -116,6 +121,9 @@ public:
     return buffer;
   }
 
+  /**
+   * Parses a decimal number from a string representation.
+   */
   static Maybe<Decimal> fromString(const strref& string) {
     if (string.length() > MAX_STRING_LENGTH) {
       return {};

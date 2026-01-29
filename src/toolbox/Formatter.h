@@ -5,6 +5,9 @@
 
 namespace toolbox {
 
+/**
+ * Small printf-style formatter that writes into a caller-provided buffer.
+ */
 class Formatter final {
   char* _buffer;
   size_t _size;
@@ -49,6 +52,9 @@ public:
   }
 };
 
+/**
+ * Format into a fixed-size stack buffer (array reference overload).
+ */
 template<size_t size>
 char* format(char (&buffer)[size], strref fmt, ...) {
   Formatter formatter {buffer, size};
@@ -61,8 +67,14 @@ char* format(char (&buffer)[size], strref fmt, ...) {
   return formatter.buffer();
 }
 
+/**
+ * Configure internal rotating buffers used by the global format() overload.
+ */
 void initFormatBuffers(size_t bufferSize = 128u, size_t bufferCount = 4u);
 
+/**
+ * Format into an internal rotating buffer.
+ */
 char* format(strref fmt, ...);
 
 }

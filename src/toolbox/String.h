@@ -30,12 +30,15 @@ class __FlashStringHelper; // Forward declare helper for strings stored in "PROG
 
 namespace toolbox {
 
+/**
+ * Compare two PROGMEM strings by content.
+ */
 int memcmp_P2(PGM_P str1P, PGM_P str2P, size_t size);
 
 /**
  * Lightweight, read-only wrapper around const char pointers to "C-style strings" - which can
  * be either stored in normal or PROGMEM memory - or String instances from the Arduino library.
- * 
+ *
  * It is meant to reduce the amount of code needed to handle the different options in other
  * library code. It has some run-time overhead as it has to select the correct variant of the
  * underlying string access functions (i.e. standard vs. *_P variant). This should not make a
@@ -254,6 +257,20 @@ public:
       }
       default: return -1;
     }
+  }
+
+  bool startsWith(const strref& prefix) const {
+    if (prefix._length > _length) {
+      return false;
+    }
+    return leftmost(prefix._length) == prefix;
+  }
+
+  bool endsWith(const strref& suffix) const {
+    if (suffix._length > _length) {
+      return false;
+    }
+    return rightmost(suffix._length) == suffix;
   }
 
   int compare(const strref& other) const {

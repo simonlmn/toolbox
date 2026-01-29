@@ -32,6 +32,9 @@ public:
   bool operator==(const T& other) const { return _available && (_value == other); }
   bool operator!=(const T& other) const { return _available && (_value != other); }
 
+  /**
+   * Apply a mapping function when a value is available.
+   */
   #ifndef ARDUINO_AVR_NANO
   template<typename F>
   Maybe<typename std::invoke_result<F, const T&>::type> then(F f) const {
@@ -52,6 +55,9 @@ public:
   }
   #endif
 
+  /**
+   * Provide a fallback value by invoking a thunk when empty.
+   */
   #ifndef ARDUINO_AVR_NANO
   template<typename F, std::enable_if_t<std::is_invocable<F>::value, bool> = true>
   const T& otherwise(F f) const {
@@ -63,6 +69,9 @@ public:
   }
   #endif
 
+  /**
+   * Provide a fallback value when empty.
+   */
   const T& otherwise(const T& v) const {
     if (available()) {
       return get();

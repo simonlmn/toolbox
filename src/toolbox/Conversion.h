@@ -9,10 +9,10 @@ namespace toolbox {
 
 /**
  * Generic conversion struct template.
- * 
+ *
  * The default implementation returns empty strings and empty Maybe objects.
  * Specializations for specific types provide methods to convert to/from strings.
- * 
+ *
  * Note: The result provided by toString() can only be assumed to be valid until
  * the next call to toString() on any converter!
  */
@@ -190,6 +190,9 @@ struct convert<unsigned long> final {
   }
 };
 
+/**
+ * Formatting modes for boolean conversions.
+ */
 enum struct BoolFormat {
   Logic,
   Numeric,

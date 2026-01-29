@@ -6,6 +6,9 @@
 
 namespace toolbox {
 
+/**
+ * Simple iterable wrapper for pointer ranges.
+ */
 template<typename T>
 struct Iterable {
   T* _begin;
@@ -17,6 +20,9 @@ struct Iterable {
   T* end() const { return _end; }
 };
 
+/**
+ * Key/value pair container used by FixedCapacityMap.
+ */
 template<typename K, typename V>
 class Mapping {
   K _key;
@@ -31,6 +37,12 @@ public:
   V& value() { return _value; }
 };
 
+/**
+ * Fixed-size sorted map with deterministic memory usage.
+ *
+ * The map maintains entries sorted by key and supports logarithmic lookup
+ * with insertion/removal by shifting existing elements.
+ */
 template<typename K, typename V, size_t CAPACITY>
 class FixedCapacityMap {
   using EntryType = Mapping<K, V>;
