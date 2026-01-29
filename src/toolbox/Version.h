@@ -1,4 +1,4 @@
 /**
  * Current toolbox library version.
  */
-#define TOOLBOX_VERSION "0.8.0"
+#define TOOLBOX_VERSION "0.9.0"
