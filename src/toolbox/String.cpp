@@ -22,8 +22,11 @@ int memcmp_P2(PGM_P str1P, PGM_P str2P, size_t size)
     return result;
 }
 
-const char strref::EMPTY_CSTR[] = "";
-const char strref::EMPTY_FPSTR[] PROGMEM = "";
+shared_str::shared_str(const strref& string) {
+    _storage = new storage(string.length());
+    string.copy(_storage->buffer, _storage->length + 1, true);
+}
+
 const strref strref::EMPTY {};
 
 } // namespace toolbox

@@ -95,6 +95,24 @@ int main() {
   assert(c.length() == 8);
   assert(c.isZeroTerminated() == false);
   assert(c == d);
-  
+
+  toolbox::strref e{"abcdef"};
+  toolbox::shared_str f = e.toString();
+  assert(!f.empty());
+  assert(f.length() == 6);
+  assert(strcmp(f.cstr(), "abcdef") == 0);
+  assert(e == f);
+
+  toolbox::shared_str g = f;
+
+  f.clear();
+  assert(f.empty());
+  assert(f.length() == 0);
+  assert(strcmp(f.cstr(), "") == 0);
+
+  assert(!g.empty());
+  assert(g.length() == 6);
+  assert(strcmp(g.cstr(), "abcdef") == 0);
+
   return 0;
 }
