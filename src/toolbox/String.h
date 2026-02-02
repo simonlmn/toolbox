@@ -473,7 +473,7 @@ public:
     switch (_type) {
       case Type::String:
         switch (other._type) {
-          case Type::String: return _reference.string->compareTo(*other._reference.string);
+          case Type::String: return memcmp(_reference.string->c_str() + _offset, other._reference.string->c_str() + other._offset, _length);
           case Type::ConstChar: return memcmp(_reference.string->c_str() + _offset, other._reference.constchar + other._offset, _length);
           case Type::ProgMem: return memcmp_P(_reference.string->c_str() + _offset, reinterpret_cast<const char*>(other._reference.progmem) + other._offset, _length);
           case Type::SharedStr: return memcmp(_reference.string->c_str() + _offset, other._reference.sharedstr->cstr() + other._offset, _length);
@@ -543,6 +543,8 @@ class str {
 public:
   str() {}
   
+  const char* cstr() const { return _buffer; }
+
   operator const char*() const { return _buffer; }
 
   str(const strref& string) { string.copy(_buffer, BUFFER_SIZE, true); }
