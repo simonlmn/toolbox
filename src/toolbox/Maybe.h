@@ -8,6 +8,25 @@
 
 namespace toolbox {
 
+template<typename T>
+class Maybe;
+
+template<typename T>
+struct is_maybe : std::false_type {};
+
+template<typename U>
+struct is_maybe<Maybe<U>> : std::true_type {};
+
+template<typename R>
+struct unwrap_maybe {
+  using type = R;
+};
+
+template<typename U>
+struct unwrap_maybe<Maybe<U>> {
+  using type = U;
+};
+
 /**
  * Basic implementation of a type of values which may be not available (e.g. due to an error), similar to std::optional.
  */
@@ -37,15 +56,20 @@ public:
    */
   #ifndef ARDUINO_AVR_NANO
   template<typename F>
-  Maybe<typename std::invoke_result<F, const T&>::type> then(F f) const {
+  Maybe<typename unwrap_maybe<std::invoke_result_t<F, const T&>>::type> then(F f) const {
+    using R = std::invoke_result_t<F, const T&>;
     if (available()) {
-      return f(get());
+      if constexpr (is_maybe<R>::value) {
+        return f(get());
+      } else {
+        return Maybe<R>(f(get()));
+      }
     } else {
       return {};
     }
   }
   #else
-  template<typename F, typename R>
+  template<typename R, typename F>
   Maybe<R> then(F f) const {
     if (available()) {
       return f(get());
