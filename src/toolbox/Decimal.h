@@ -104,7 +104,7 @@ public:
   strref toString(char* buffer = nullptr) const {
     buffer = buffer ? buffer : BUFFER;
 
-    auto length = sprintf(buffer, "%lli", _number);
+    auto length = snprintf(buffer, MAX_STRING_LENGTH + 1, "%lli", _number);
     if (_decimalPlaces > 0) {
       auto signLength = _number < 0 ? 1 : 0;
       length -= signLength;

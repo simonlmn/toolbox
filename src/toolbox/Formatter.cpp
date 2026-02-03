@@ -43,7 +43,8 @@ void initFormatBuffers(size_t bufferSize, size_t bufferCount) {
 char* format(strref fmt, ...) {
   static char NULL_BUFFER[1] = {'\0'};
   static const auto initialized = SHARED_FORMAT_BUFFERS.init(true);
-
+  (void)initialized;
+  
   if (!SHARED_FORMAT_BUFFERS._buffers) {
     return NULL_BUFFER;
   }

@@ -1,9 +1,9 @@
 
-#include "../src/toolbox/FixedCapacityMap.h"
+#include <toolbox/FixedCapacityMap.h>
 #include <cstdio>
 #include <cassert>
 
-int main() {
+void test_FixedCapacityMap() {
   toolbox::FixedCapacityMap<int, int, 10> map {};
 
   assert(map.capacity() == 10);
@@ -42,5 +42,4 @@ int main() {
   assert(map.find(8) == nullptr);
   assert(map.find(3) == nullptr);
 
-  return 0;
 }

@@ -1,9 +1,9 @@
 
-#include "../src/toolbox/String.h"
+#include <toolbox/String.h>
 #include <cstdio>
 #include <cassert>
 
-int main() {
+void test_String() {
   toolbox::strref a;
   assert(a.length() == 0);
   assert(a.offset() == 0);
@@ -97,7 +97,7 @@ int main() {
   assert(c == d);
 
   toolbox::strref e{"abcdef"};
-  toolbox::shared_str f = e.toString();
+  toolbox::shared_str f = e.materialize();
   assert(!f.empty());
   assert(f.length() == 6);
   assert(strcmp(f.cstr(), "abcdef") == 0);
@@ -114,5 +114,4 @@ int main() {
   assert(g.length() == 6);
   assert(strcmp(g.cstr(), "abcdef") == 0);
 
-  return 0;
 }

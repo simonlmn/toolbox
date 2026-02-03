@@ -18,8 +18,8 @@ namespace toolbox {
  */
 template<typename T>
 struct convert final {
-  static strref toString(T value) { return ""; }
-  static Maybe<T> fromString(const strref& string) { return {}; }
+  static strref toString(T value) { (void)value; return ""; }
+  static Maybe<T> fromString(const strref& string) { (void)string; return {}; }
 };
 
 inline char NUMBER_STRING_BUFFER[2 + 8 * sizeof(long)];

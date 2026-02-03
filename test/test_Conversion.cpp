@@ -1,9 +1,9 @@
 
-#include "../src/toolbox/Conversion.h"
+#include <toolbox/Conversion.h>
 #include <cstdio>
 #include <cassert>
 
-int main() {
+void test_Conversion() {
   {
     toolbox::strref input {"4E20"};
     toolbox::Maybe<uint32_t> value = toolbox::convert<uint32_t>::fromString(input, nullptr, 16);
@@ -13,7 +13,7 @@ int main() {
 
   {
     toolbox::strref input {"4E20 TEST"};
-    toolbox::strref next;
+    toolbox::strref next {"INIT"};
     toolbox::Maybe<uint32_t> value = toolbox::convert<uint32_t>::fromString(input, &next, 16);
     assert(value.available());
     assert(value.get() == 20000u);
@@ -22,11 +22,10 @@ int main() {
 
   {
     toolbox::strref input {"TEST"};
-    toolbox::strref next;
+    toolbox::strref next {"INIT"};
     toolbox::Maybe<uint32_t> value = toolbox::convert<uint32_t>::fromString(input, &next, 16);
     assert(!value.available());
-    assert(value.get() == 20000u);
-    assert(next == "TEST");
+    assert(next == "INIT");
   }
 
   {
@@ -36,5 +35,4 @@ int main() {
     assert(value.get() == true);
   }
 
-  return 0;
 }

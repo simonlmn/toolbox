@@ -15,19 +15,6 @@ using ssize_t = long;
 #endif
 #include "Maybe.h"
 
-#ifndef ARDUINO
-#include <cstring>
-class __FlashStringHelper; // Forward declare helper for strings stored in "PROGMEM"
-#define PROGMEM
-#define PGM_P const char*
-#define FPSTR(x) reinterpret_cast<const __FlashStringHelper*>(x)
-#define strlen_P strlen
-#define memcpy_P memcpy
-#define memchr_P memchr
-#define memcmp_P memcmp
-#define pgm_read_byte(x) *(x)
-#endif
-
 namespace toolbox {
 
 inline const char EMPTY_CSTR[] = "";

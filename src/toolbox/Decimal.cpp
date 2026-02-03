@@ -11,33 +11,33 @@ namespace toolbox {
 uint8_t numberOfDigits(int32_t x) {
   // Note: the implementation uses binary search to make the lookup take similar time for all orders of magnitude.
   x = abs(x);
-  if (x < 100000u) {
-    if (x < 1000u) {
-      if (x < 10u) {
+  if (x < 100000) {
+    if (x < 1000) {
+      if (x < 10) {
         return 1;
-      } else if (x < 100u) {
+      } else if (x < 100) {
         return 2;
       } else {
         return 3;
       }
     } else {
-      if (x < 10000u) {
+      if (x < 10000) {
         return 4;
       } else {
         return 5;
       }
     }
   } else {
-    if (x < 10000000u) {
-      if (x < 1000000u) {
+    if (x < 10000000) {
+      if (x < 1000000) {
         return 6;
       } else {
         return 7;
       }
     } else {
-      if (x < 100000000u) {
+      if (x < 100000000) {
         return 8;
-      } else if (x < 1000000000u) {
+      } else if (x < 1000000000) {
         return 9;
       } else {
         return 10;
