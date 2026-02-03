@@ -3,122 +3,122 @@
 #include <toolbox/String.h>
 #include <cstring>
 
+using namespace yatest;
+
 namespace {
-static const yatest::TestSuite& TestString =
-    yatest::suite("String")
+static const TestSuite& TestString =
+    suite("String")
         .tests("default strref", []() {
-          toolbox::strref a;
-          yatest::expect(a.length() == 0, "default length");
-          yatest::expect(a.offset() == 0, "default offset");
-          yatest::expect(a.charAt(1) == '\0', "default charAt");
-          yatest::expect(a.indexOf('a') == -1, "default indexOf");
-          yatest::expect(a.isInProgmem() == false, "default progmem");
-          yatest::expect(a.isZeroTerminated() == true, "default zero terminated");
-          yatest::expect(a.leftmost(5) == "", "default leftmost");
-          yatest::expect(a.rightmost(5) == "", "default rightmost");
-          yatest::expect(a.middle(2, 4) == "", "default middle");
-          yatest::expect(a.substring(2, 2) == "", "default substring");
-          yatest::expect(a.skip(3) == "", "default skip");
+            toolbox::strref a;
+            expect::equals(a.length(), 0u, "default length");
+            expect::equals(a.offset(), 0u, "default offset");
+            expect::equals(a.charAt(1), '\0', "default charAt");
+            expect::equals(a.indexOf('a'), -1, "default indexOf");
+            expect::isFalse(a.isInProgmem(), "default progmem");
+            expect::isTrue(a.isZeroTerminated(), "default zero terminated");
+            expect::equals(a.leftmost(5), "", "default leftmost");
+            expect::equals(a.rightmost(5), "", "default rightmost");
+            expect::equals(a.middle(2, 4), "", "default middle");
+            expect::equals(a.substring(2, 2), "", "default substring");
+            expect::equals(a.skip(3), "", "default skip");
         })
         .tests("basic operations", []() {
-          toolbox::strref a{"Hello World!"};
-          yatest::expect(a.length() == 12, "length");
-          yatest::expect(a.offset() == 0, "offset");
-          yatest::expect(a.charAt(1) == 'e', "charAt");
-          yatest::expect(a.indexOf('o') == 4, "indexOf");
-          yatest::expect(a.isInProgmem() == false, "progmem");
-          yatest::expect(a.isZeroTerminated() == true, "zero terminated");
-          yatest::expect(a.leftmost(5) == "Hello", "leftmost");
-          yatest::expect(a.leftmost(5).offset() == 0, "leftmost offset");
-          yatest::expect(a.leftmost(5).length() == 5, "leftmost length");
-          yatest::expect(a.leftmost(5).isZeroTerminated() == false, "leftmost zero terminated");
-          yatest::expect(a.rightmost(5) == "orld!", "rightmost");
-          yatest::expect(a.rightmost(5).offset() == 7, "rightmost offset");
-          yatest::expect(a.rightmost(5).length() == 5, "rightmost length");
-          yatest::expect(a.rightmost(5).isZeroTerminated() == true, "rightmost zero terminated");
-          yatest::expect(a.middle(2, 4) == "ll", "middle");
-          yatest::expect(a.middle(2, 4).offset() == 2, "middle offset");
-          yatest::expect(a.middle(2, 4).length() == 2, "middle length");
-          yatest::expect(a.middle(2, 4).isZeroTerminated() == false, "middle zero terminated");
-          yatest::expect(a.substring(2, 2) == "ll", "substring");
-          yatest::expect(a.substring(2, 2).offset() == 2, "substring offset");
-          yatest::expect(a.substring(2, 2).length() == 2, "substring length");
-          yatest::expect(a.substring(2, 2).isZeroTerminated() == false, "substring zero terminated");
-          yatest::expect(a.skip(3) == "lo World!", "skip");
-          yatest::expect(a.skip(3).offset() == 3, "skip offset");
-          yatest::expect(a.skip(3).length() == 9, "skip length");
-          yatest::expect(a.skip(3).isZeroTerminated() == true, "skip zero terminated");
+            toolbox::strref a{"Hello World!"};
+            expect::equals(a.length(), 12u, "length");
+            expect::equals(a.offset(), 0u, "offset");
+            expect::equals(a.charAt(1), 'e', "charAt");
+            expect::equals(a.indexOf('o'), 4, "indexOf");
+            expect::isFalse(a.isInProgmem(), "progmem");
+            expect::isTrue(a.isZeroTerminated(), "zero terminated");
+            expect::equals(a.leftmost(5), "Hello", "leftmost");
+            expect::equals(a.leftmost(5).offset(), 0u, "leftmost offset");
+            expect::equals(a.leftmost(5).length(), 5u, "leftmost length");
+            expect::isFalse(a.leftmost(5).isZeroTerminated(), "leftmost zero terminated");
+            expect::equals(a.rightmost(5), "orld!", "rightmost");
+            expect::equals(a.rightmost(5).offset(), 7u, "rightmost offset");
+            expect::equals(a.rightmost(5).length(), 5u, "rightmost length");
+            expect::isTrue(a.rightmost(5).isZeroTerminated(), "rightmost zero terminated");
+            expect::equals(a.middle(2, 4), "ll", "middle");
+            expect::equals(a.middle(2, 4).offset(), 2u, "middle offset");
+            expect::equals(a.middle(2, 4).length(), 2u, "middle length");
+            expect::isFalse(a.middle(2, 4).isZeroTerminated(), "middle zero terminated");
+            expect::equals(a.substring(2, 2), "ll", "substring");
+            expect::equals(a.substring(2, 2).offset(), 2u, "substring offset");
+            expect::equals(a.substring(2, 2).length(), 2u, "substring length");
+            expect::isFalse(a.substring(2, 2).isZeroTerminated(), "substring zero terminated");
+            expect::equals(a.skip(3), "lo World!", "skip");
+            expect::equals(a.skip(3).offset(), 3u, "skip offset");
+            expect::equals(a.skip(3).length(), 9u, "skip length");
+            expect::isTrue(a.skip(3).isZeroTerminated(), "skip zero terminated");
+            char buffer[15];
+            expect::equals(a.copy(buffer, 15, true), 12u, "copy length");
+            expect::equals(a.substring(3, 4).copy(buffer, 15, true), 4u, "substring copy length");
+            char* array = a.toCharArray(false);
+            delete[] array;
 
-          char buffer[15];
-          yatest::expect(a.copy(buffer, 15, true) == 12, "copy length");
-          yatest::expect(a.substring(3, 4).copy(buffer, 15, true) == 4, "substring copy length");
-
-          char* array = a.toCharArray(false);
-          delete[] array;
-
-          yatest::expect(a.substring(8, 5) == "rld!", "substring rld");
-          yatest::expect(a.substring(13, 5) == "", "substring out of range");
-          yatest::expect(a.substring(0, 0) == "", "substring zero length");
-          yatest::expect(a.substring(0, 15) == "Hello World!", "substring full");
+            expect::equals(a.substring(8, 5), "rld!", "substring rld");
+            expect::equals(a.substring(13, 5), "", "substring out of range");
+            expect::equals(a.substring(0, 0), "", "substring zero length");
+            expect::equals(a.substring(0, 15), "Hello World!", "substring full");
         })
         .tests("progmem strings and comparisons", []() {
-          toolbox::strref a{"Hello World!"};
-          toolbox::strref b{FPSTR("Hello World2")};
-          yatest::expect(b.length() == 12, "progmem length");
-          yatest::expect(b.offset() == 0, "progmem offset");
-          yatest::expect(b.charAt(1) == 'e', "progmem charAt");
-          yatest::expect(b.indexOf('o') == 4, "progmem indexOf");
-          yatest::expect(b.isInProgmem() == true, "progmem flag");
-          yatest::expect(b.isZeroTerminated() == true, "progmem zero terminated");
-          yatest::expect(b.leftmost(5) == "Hello", "progmem leftmost");
-          yatest::expect(b.leftmost(5).offset() == 0, "progmem leftmost offset");
-          yatest::expect(b.leftmost(5).length() == 5, "progmem leftmost length");
-          yatest::expect(b.leftmost(5).isZeroTerminated() == false, "progmem leftmost zero terminated");
-          yatest::expect(b.rightmost(5) == "orld2", "progmem rightmost");
-          yatest::expect(b.rightmost(5).offset() == 7, "progmem rightmost offset");
-          yatest::expect(b.rightmost(5).length() == 5, "progmem rightmost length");
-          yatest::expect(b.rightmost(5).isZeroTerminated() == true, "progmem rightmost zero terminated");
-          yatest::expect(b.middle(2, 4) == "ll", "progmem middle");
-          yatest::expect(b.middle(2, 4).offset() == 2, "progmem middle offset");
-          yatest::expect(b.middle(2, 4).length() == 2, "progmem middle length");
-          yatest::expect(b.middle(2, 4).isZeroTerminated() == false, "progmem middle zero terminated");
-          yatest::expect(b.substring(2, 2) == "ll", "progmem substring");
-          yatest::expect(b.substring(2, 2).offset() == 2, "progmem substring offset");
-          yatest::expect(b.substring(2, 2).length() == 2, "progmem substring length");
-          yatest::expect(b.substring(2, 2).isZeroTerminated() == false, "progmem substring zero terminated");
-          yatest::expect(b.skip(3) == "lo World2", "progmem skip");
-          yatest::expect(b.skip(3).offset() == 3, "progmem skip offset");
-          yatest::expect(b.skip(3).length() == 9, "progmem skip length");
-          yatest::expect(b.skip(3).isZeroTerminated() == true, "progmem skip zero terminated");
+            toolbox::strref a{"Hello World!"};
+            toolbox::strref b{FPSTR("Hello World2")};
+            expect::equals(b.length(), 12u, "progmem length");
+            expect::equals(b.offset(), 0u, "progmem offset");
+            expect::equals(b.charAt(1), 'e', "progmem charAt");
+            expect::equals(b.indexOf('o'), 4, "progmem indexOf");
+            expect::isTrue(b.isInProgmem(), "progmem flag");
+            expect::isTrue(b.isZeroTerminated(), "progmem zero terminated");
+            expect::equals(b.leftmost(5), "Hello", "progmem leftmost");
+            expect::equals(b.leftmost(5).offset(), 0u, "progmem leftmost offset");
+            expect::equals(b.leftmost(5).length(), 5u, "progmem leftmost length");
+            expect::isFalse(b.leftmost(5).isZeroTerminated(), "progmem leftmost zero terminated");
+            expect::equals(b.rightmost(5), "orld2", "progmem rightmost");
+            expect::equals(b.rightmost(5).offset(), 7u, "progmem rightmost offset");
+            expect::equals(b.rightmost(5).length(), 5u, "progmem rightmost length");
+            expect::isTrue(b.rightmost(5).isZeroTerminated(), "progmem rightmost zero terminated");
+            expect::equals(b.middle(2, 4), "ll", "progmem middle");
+            expect::equals(b.middle(2, 4).offset(), 2u, "progmem middle offset");
+            expect::equals(b.middle(2, 4).length(), 2u, "progmem middle length");
+            expect::isFalse(b.middle(2, 4).isZeroTerminated(), "progmem middle zero terminated");
+            expect::equals(b.substring(2, 2), "ll", "progmem substring");
+            expect::equals(b.substring(2, 2).offset(), 2u, "progmem substring offset");
+            expect::equals(b.substring(2, 2).length(), 2u, "progmem substring length");
+            expect::isFalse(b.substring(2, 2).isZeroTerminated(), "progmem substring zero terminated");
+            expect::equals(b.skip(3), "lo World2", "progmem skip");
+            expect::equals(b.skip(3).offset(), 3u, "progmem skip offset");
+            expect::equals(b.skip(3).length(), 9u, "progmem skip length");
+            expect::isTrue(b.skip(3).isZeroTerminated(), "progmem skip zero terminated");
 
-          yatest::expect(a != b, "comparison a != b");
-          yatest::expect(b != a, "comparison b != a");
-          yatest::expect(a < b, "comparison a < b");
-          yatest::expect(b > a, "comparison b > a");
+            expect::isTrue(a != b, "comparison a != b");
+            expect::isTrue(b != a, "comparison b != a");
+            expect::isTrue(a < b, "comparison a < b");
+            expect::isTrue(b > a, "comparison b > a");
         })
         .tests("materialize and shared_str", []() {
-          toolbox::strref c{"abc\0def", 8};
-          toolbox::strref d{"abc\0def", 8};
-          yatest::expect(c.length() == 8, "length with embedded null");
-          yatest::expect(c.isZeroTerminated() == false, "not zero terminated");
-          yatest::expect(c == d, "equality with embedded null");
+            toolbox::strref c{"abc\0def", 8};
+            toolbox::strref d{"abc\0def", 8};
+            expect::equals(c.length(), 8u, "length with embedded null");
+            expect::isFalse(c.isZeroTerminated(), "not zero terminated");
+            expect::isTrue(c == d, "equality with embedded null");
 
-          toolbox::strref e{"abcdef"};
-          toolbox::shared_str f = e.materialize();
-          yatest::expect(!f.empty(), "materialize not empty");
-          yatest::expect(f.length() == 6, "materialize length");
-          yatest::expect(strcmp(f.cstr(), "abcdef") == 0, "materialize contents");
-          yatest::expect(e == f, "materialize equality");
+            toolbox::strref e{"abcdef"};
+            toolbox::shared_str f = e.materialize();
+            expect::isFalse(f.empty(), "materialize not empty");
+            expect::equals(f.length(), 6u, "materialize length");
+            expect::equals(strcmp(f.cstr(), "abcdef"), 0, "materialize contents");
+            expect::isTrue(e == f, "materialize equality");
 
-          toolbox::shared_str g = f;
+            toolbox::shared_str g = f;
 
-          f.clear();
-          yatest::expect(f.empty(), "clear empties");
-          yatest::expect(f.length() == 0, "clear length");
-          yatest::expect(strcmp(f.cstr(), "") == 0, "clear contents");
+            f.clear();
+            expect::isTrue(f.empty(), "clear empties");
+            expect::equals(f.length(), 0u, "clear length");
+            expect::equals(strcmp(f.cstr(), ""), 0, "clear contents");
 
-          yatest::expect(!g.empty(), "copy not empty");
-          yatest::expect(g.length() == 6, "copy length");
-          yatest::expect(strcmp(g.cstr(), "abcdef") == 0, "copy contents");
+            expect::isFalse(g.empty(), "copy not empty");
+            expect::equals(g.length(), 6u, "copy length");
+            expect::equals(strcmp(g.cstr(), "abcdef"), 0, "copy contents");
         });
 }
