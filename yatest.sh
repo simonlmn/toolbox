@@ -1,28 +1,32 @@
 #!/bin/bash
 # Build and run tests for a library.
 # 
-# Copy this file into the root of your library and run it to build and execute tests.
+# Either copy this file into the root of your library and run it to build and execute tests
+# or set the LIB_DIR environment variable to point to your library before running this script.
 #
 
 set -e
 
-LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -z "$LIB_DIR" -o ! -d "$LIB_DIR" ]; then
+    LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+fi
 
 export ARDUINO_DIRECTORIES_DATA="$LIB_DIR/build/.arduino"
 export ARDUINO_DIRECTORIES_DOWNLOADS="$LIB_DIR/build/.arduino/staging"
 export ARDUINO_DIRECTORIES_USER="$LIB_DIR/build/.arduino"
 
-if [ -z "$YATEST_DIR" -o ! -d "$YATEST_DIR" ]; then
-    echo "YATEST_DIR is not set or does not point to a directory. Installing yatest library..."
-    arduino-cli lib update-index
-    arduino-cli lib install yatest
-
+if [ -z "$YATEST_DIR" ]; then
     YATEST_DIR="$(cd "$ARDUINO_DIRECTORIES_USER/libraries/yatest" && pwd)"
-    if [ ! -f "$YATEST_DIR/src/build-and-run.sh" ]; then
-        echo "Error: yatest build script not found at $YATEST_DIR"
-        exit 1
+    if [ ! -d "$YATEST_DIR" -o "$YATEST_FORCE_INSTALL" -eq 1 ]; then
+        echo "Yatest not found or forced to install. Installing yatest library..."
+        arduino-cli lib update-index
+        arduino-cli lib install yatest
     fi
 fi
 
-# Once yatest is installed, we can use the build-and-run.sh script from there to take over the rest.
+if [ ! -f "$YATEST_DIR/src/build-and-run.sh" ]; then
+    echo "Error: yatest build script not found at $YATEST_DIR"
+    exit 1
+fi
+
 "$YATEST_DIR/src/build-and-run.sh" "$LIB_DIR"
