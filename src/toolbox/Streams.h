@@ -24,7 +24,6 @@ struct IInput {
  */
 class StringInput final : public IInput {
   strref _string;
-  size_t _readPosition;
 
 public:
   StringInput(const strref& string) : _string(string) {}
